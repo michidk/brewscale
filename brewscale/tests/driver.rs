@@ -1,10 +1,11 @@
-//! The driver exercised end-to-end over the mock transport. Backends reuse
-//! this exact driver code, so these tests cover them too.
-#![cfg(feature = "mock")]
+//! The protocol-agnostic driver exercised end-to-end over the mock transport,
+//! never naming a vendor type. Backends reuse this exact driver code.
+#![cfg(feature = "bookoo")]
 
-use brewscale_core::bookoo::{Bookoo, Model};
-use brewscale_core::mock::{block_on, MockTransport};
-use brewscale_core::*;
+use brewscale::mock::{block_on, MockTransport};
+use brewscale::*;
+
+const SERVICE: u16 = 0x0FFE;
 
 fn packet(ty: u8, weight_cg: u8) -> [u8; 20] {
     let mut p = [0u8; 20];
@@ -15,7 +16,7 @@ fn packet(ty: u8, weight_cg: u8) -> [u8; 20] {
     p
 }
 
-fn bookoo_adv(name: &str) -> Advertisement {
+fn named(name: &str) -> Advertisement {
     let mut a = Advertisement::empty();
     a.set_name(name.as_bytes());
     a
@@ -29,14 +30,14 @@ fn finds_connects_streams_and_sends_commands() {
     corrupt[19] ^= 0xFF;
     let ok2 = packet(0x0B, 30);
     let script: [&[u8]; 4] = [&ok1, &unknown, &corrupt, &ok2];
-    let t = MockTransport::new(bookoo_adv("BOOKOO_SC U 0001"), &script);
+    let t = MockTransport::new(named("BOOKOO_SC U 0001"), SERVICE, &script);
 
     block_on(async {
         let mut transport = &t;
-        let (peer, model) = find(&mut transport).await.unwrap();
-        assert_eq!(model, Model::Ultra);
+        let (peer, protocol) = find::<AnyProtocol, _>(&mut transport).await.unwrap();
+        assert_eq!(protocol.name(), "BOOKOO Themis Ultra");
         let link = transport.connect(&peer).await.unwrap();
-        let mut scale = Scale::attach(&link, Bookoo(model)).await.unwrap();
+        let mut scale: AnyScale<_> = Scale::attach(&link, protocol).await.unwrap();
 
         let weight = |e: Event| match e {
             Event::Measurement(m) => m.weight_cg,
@@ -62,35 +63,18 @@ fn finds_connects_streams_and_sends_commands() {
 }
 
 #[test]
-fn find_skips_unrelated_devices_and_attach_fails_on_wrong_service() {
-    let t = MockTransport::new(bookoo_adv("ACAIA"), &[]);
-    // Not a BOOKOO scale: Model::identify refuses it.
-    assert_eq!(Model::identify(&t.adv), None);
+fn unrelated_devices_are_not_detected() {
+    assert_eq!(AnyProtocol::detect(&named("ACAIA")), None);
+    assert!(AnyProtocol::detect(&named("BOOKOO_SC 1234")).is_some());
+}
 
-    struct Odd;
-    impl Protocol for Odd {
-        fn service(&self) -> u16 {
-            0x1234
-        }
-        fn notify_characteristic(&self) -> u16 {
-            1
-        }
-        fn command_characteristic(&self) -> u16 {
-            2
-        }
-        fn capabilities(&self) -> Capabilities {
-            unreachable!()
-        }
-        fn decode(&self, _: &[u8]) -> Result<Event, DecodeError> {
-            unreachable!()
-        }
-        fn encode(&self, _: Command) -> Result<Frame, EncodeError> {
-            unreachable!()
-        }
-    }
+#[test]
+fn attach_fails_when_the_device_lacks_the_protocols_service() {
+    let t = MockTransport::new(named("BOOKOO_SC 1"), 0x1234, &[]);
     block_on(async {
         let mut transport = &t;
         let link = transport.connect(&()).await.unwrap();
-        assert!(matches!(Scale::attach(&link, Odd).await, Err(Error::Transport(_))));
+        let protocol = AnyProtocol::detect(&named("BOOKOO_SC 1")).unwrap();
+        assert!(matches!(Scale::attach(&link, protocol).await, Err(Error::Transport(_))));
     });
 }

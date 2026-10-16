@@ -1,8 +1,11 @@
-//! BOOKOO Themis scales. Wire format:
+//! BOOKOO Themis Mini/Ultra protocol drivers. Wire format:
 //! <https://github.com/BooKooCode/OpenSource> (`bookoo_mini_scale`, `bookoo_ultra_scale`).
 //!
 //! Service `0x0FFE`; notify `0xFF11`; write `0xFF12`. Every packet is
 //! `[0x03, type, data.., xor]` where `xor` is the XOR of all preceding bytes.
+
+#![no_std]
+#![forbid(unsafe_code)]
 
 mod mini;
 mod ultra;
@@ -10,8 +13,8 @@ mod ultra;
 pub use mini::Mini;
 pub use ultra::Ultra;
 
-use crate::{
-    Advertisement, AutoBrewEvent, AutoBrewState, Capabilities, Command, DecodeError, EncodeError, Event, Frame,
+use brewscale_core::{
+    Advertisement, AutoBrewEvent, AutoBrewState, Capabilities, Command, DecodeError, Detect, EncodeError, Event, Frame,
     Measurement, Protocol, WeightUnit,
 };
 
@@ -74,7 +77,16 @@ macro_rules! dispatch {
     };
 }
 
+impl Detect for Bookoo {
+    fn detect(adv: &Advertisement) -> Option<Self> {
+        Model::identify(adv).map(Self)
+    }
+}
+
 impl Protocol for Bookoo {
+    fn name(&self) -> &'static str {
+        dispatch!(self, p => p.name())
+    }
     fn service(&self) -> u16 {
         SERVICE
     }
@@ -178,8 +190,7 @@ fn encode_common(command: Command, max_beep: u8) -> Result<Frame, EncodeError> {
         Command::TareAndStartTimer => command_frame(0x07, 0, 0),
         Command::SetFlowSmoothing(on) => command_frame(0x08, on as u8, 0),
         Command::SetBeepLevel(_) | Command::SetAutoOff { .. } => return Err(EncodeError::OutOfRange),
-        Command::SetPowderWeight { .. } | Command::Shutdown | Command::KeepAwake => {
-            return Err(EncodeError::Unsupported)
-        }
+        // Ultra-only or future commands.
+        _ => return Err(EncodeError::Unsupported),
     })
 }

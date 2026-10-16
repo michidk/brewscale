@@ -1,14 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
-    ":enableVulnerabilityAlertsWithLabel('security')"
+    "github>michidk/workflows//templates/renovate"
   ],
-  "labels": ["no-stale", "bot"],
+  "addLabels": [
+    "no-stale"
+  ],
   "packageRules": [
     {
-      "matchManagers": ["cargo"],
-      "groupName": "All Rust Dependencies"
+      "matchManagers": [
+        "cargo"
+      ],
+      "groupName": "All Cargo Dependencies"
     }
   ]
 }

@@ -1,9 +1,9 @@
-//! Find a BOOKOO Themis Mini/Ultra, log weights, tare once, reconnect on drop.
+//! Find any supported scale (protocol-agnostic), log weights, tare once,
+//! reconnect on drop.
 //! `cargo run -p brewscale --features btleplug --example desktop`
 use std::time::Duration;
 
-use brewscale::bookoo::{Bookoo, Model};
-use brewscale::{find, BtleplugTransport, Error, Event, Link, Scale, Transport, TransportError};
+use brewscale::{find, AnyProtocol, BtleplugTransport, Error, Event, Link, Protocol, Scale, Transport, TransportError};
 use tokio::time::{sleep, timeout};
 
 /// A scale streams ~10 packets/s; silence this long means a dead link.
@@ -21,20 +21,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn session<T: Transport>(transport: &mut T) -> Result<(), Error<T::Error>> {
-    println!("scanning for a BOOKOO scale...");
-    let (peer, model) = find(transport).await?;
-    println!("found BOOKOO Themis {model:?}, connecting");
+    println!("scanning for a scale...");
+    let (peer, protocol) = find::<AnyProtocol, _>(transport).await?;
+    println!("found {}, connecting", protocol.name());
     let link = transport.connect(&peer).await?;
-    let result = stream(&link, model).await;
+    let result = stream(&link, protocol).await;
     let _ = link.disconnect().await;
     result
 }
 
-async fn stream<L: Link>(link: &L, model: Model) -> Result<(), Error<L::Error>>
+async fn stream<L: Link>(link: &L, protocol: AnyProtocol) -> Result<(), Error<L::Error>>
 where
     L::Error: TransportError,
 {
-    let mut scale = Scale::attach(link, Bookoo(model)).await?;
+    let mut scale = Scale::attach(link, protocol).await?;
     println!("subscribed to weight notifications");
     let mut tared = false;
     loop {

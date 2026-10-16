@@ -1,4 +1,4 @@
-use brewscale_core::bookoo::{Bookoo, Mini, Model, Ultra};
+use brewscale_bookoo::{Bookoo, Mini, Model, Ultra};
 use brewscale_core::*;
 
 fn packet(ty: u8, data: [u8; 17]) -> [u8; 20] {

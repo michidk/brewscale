@@ -4,7 +4,16 @@ use super::*;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Mini;
 
+impl Detect for Mini {
+    fn detect(adv: &Advertisement) -> Option<Self> {
+        (Model::identify(adv) == Some(Model::Mini)).then_some(Self)
+    }
+}
+
 impl Protocol for Mini {
+    fn name(&self) -> &'static str {
+        "BOOKOO Themis Mini"
+    }
     fn service(&self) -> u16 {
         SERVICE
     }

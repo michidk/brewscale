@@ -68,6 +68,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "brewscale"
+version = "0.1.0"
+dependencies = [
+ "brewscale-bookoo",
+ "brewscale-core",
+]
+
+[[package]]
+name = "brewscale-bookoo"
+version = "0.1.0"
+dependencies = [
+ "brewscale-core",
+]
+
+[[package]]
 name = "brewscale-core"
 version = "0.1.0"
 
@@ -75,7 +90,7 @@ version = "0.1.0"
 name = "brewscale-esp32c3"
 version = "0.1.0"
 dependencies = [
- "brewscale-core",
+ "brewscale",
  "brewscale-trouble",
  "embassy-executor",
  "embassy-futures",

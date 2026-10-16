@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use std::pin::Pin;
 
 use brewscale_core::{Advertisement, ErrorKind, Link, Notifications, Transport, TransportError};

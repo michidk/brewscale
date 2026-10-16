@@ -1,10 +1,9 @@
-//! Connect to a BOOKOO Themis Mini/Ultra, log weight measurements, tare once,
-//! and reconnect whenever the link drops. ESP32-C3, TrouBLE host + esp-radio controller.
+//! Connect to any supported scale (protocol-agnostic), log weight measurements,
+//! tare once, and reconnect whenever the link drops. ESP32-C3, TrouBLE host + esp-radio controller.
 #![no_std]
 #![no_main]
 
-use brewscale_core::bookoo::{Bookoo, Model};
-use brewscale_core::{find, Error, Event, Link, Scale, Transport, TransportError};
+use brewscale::{find, AnyProtocol, Error, Event, Link, Protocol, Scale, Transport, TransportError};
 use brewscale_trouble::{ScanInbox, TroubleTransport};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -64,20 +63,20 @@ async fn main(_spawner: Spawner) {
 
 /// One find -> connect -> stream cycle. Returns when the link is lost.
 async fn session<T: Transport>(transport: &mut T) -> Result<(), Error<T::Error>> {
-    info!("scanning for a BOOKOO scale...");
-    let (peer, model) = find(transport).await?;
-    info!("found BOOKOO Themis {model:?}, connecting");
+    info!("scanning for a scale...");
+    let (peer, protocol) = find::<AnyProtocol, _>(transport).await?;
+    info!("found {}, connecting", protocol.name());
     let link = transport.connect(&peer).await?;
-    let result = stream(&link, model).await;
+    let result = stream(&link, protocol).await;
     let _ = link.disconnect().await;
     result
 }
 
-async fn stream<L: Link>(link: &L, model: Model) -> Result<(), Error<L::Error>>
+async fn stream<L: Link>(link: &L, protocol: AnyProtocol) -> Result<(), Error<L::Error>>
 where
     L::Error: TransportError,
 {
-    let mut scale = Scale::attach(link, Bookoo(model)).await?;
+    let mut scale = Scale::attach(link, protocol).await?;
     info!("subscribed to weight notifications");
     let mut tared = false;
     loop {

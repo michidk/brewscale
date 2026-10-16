@@ -1,15 +1,14 @@
 # ESP32-C3 example
 
-Firmware that scans for a BOOKOO Themis Mini/Ultra, connects, subscribes to
+Firmware that scans for a supported scale (protocol-agnostic; BOOKOO Themis Mini/Ultra
+with the `bookoo` feature), connects, subscribes to
 weight notifications, logs each measurement, sends a tare command after the
 first one, and reconnects when the link drops (including 10 s of silence).
 
 Stack: `esp-hal` 1.x + `esp-rtos` (embassy) + `esp-radio` BLE controller →
-`trouble-host` → `brewscale-trouble` → `brewscale-core`. Logging: `log` over
+`trouble-host` → `brewscale-trouble` + `brewscale` (protocols by feature). Logging: `log` over
 `esp-println` (UART/USB-serial-JTAG), level from the `ESP_LOG` env var
 (default `info`, set in `.cargo/config.toml`).
-
-**Status: builds and links; not run on hardware.** See the root README.
 
 ## Hardware
 
@@ -36,7 +35,7 @@ Pass the serial port with `ESPFLASH_PORT=/dev/ttyACM0 cargo run --release` if
 
 ```
 our address: Address { kind: Random, addr: ... }
-scanning for a BOOKOO scale...
+scanning for a scale...
 found BOOKOO Themis Ultra, connecting
 subscribed to weight notifications
 0.00 g  flow 0.00 g/s  1234 ms  battery 87%

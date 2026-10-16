@@ -39,13 +39,15 @@ const MAX_WRITES: usize = 8;
 /// reports a disconnect. Writes are recorded.
 pub struct MockTransport<'a> {
     pub adv: Advertisement,
+    /// The only service the device exposes.
+    pub service: u16,
     pub notifications: &'a [&'a [u8]],
     writes: RefCell<([[u8; 8]; MAX_WRITES], usize)>,
 }
 
 impl<'a> MockTransport<'a> {
-    pub fn new(adv: Advertisement, notifications: &'a [&'a [u8]]) -> Self {
-        Self { adv, notifications, writes: RefCell::new(([[0; 8]; MAX_WRITES], 0)) }
+    pub fn new(adv: Advertisement, service: u16, notifications: &'a [&'a [u8]]) -> Self {
+        Self { adv, service, notifications, writes: RefCell::new(([[0; 8]; MAX_WRITES], 0)) }
     }
 
     /// Number of writes, and the `i`th written frame (zero-padded to 8 bytes).
@@ -89,7 +91,7 @@ impl<'t> Link for MockLink<'t> {
         Self: 'n;
 
     async fn characteristic(&self, service: u16, c: u16) -> Result<u16, MockError> {
-        if service == crate::bookoo::SERVICE {
+        if service == self.0.service {
             Ok(c)
         } else {
             Err(MockError::NotFound)

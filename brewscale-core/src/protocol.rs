@@ -1,10 +1,14 @@
 //! Vendor-neutral data types and the [`Protocol`] trait.
 
 use core::fmt;
+
 use core::ops::Deref;
+
+use crate::Advertisement;
 
 /// Display unit configured on the scale. Reported weights are always grams.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum WeightUnit {
     Gram,
     Ounce,
@@ -60,6 +64,7 @@ pub struct AutoBrewEvent {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Event {
     Measurement(Measurement),
     /// Configured dose (Ultra), in 1/100 g.
@@ -72,6 +77,7 @@ pub enum Event {
 /// Scale-independent commands. Not every scale supports every command; see
 /// [`Protocol::capabilities`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Command {
     Tare,
     StartTimer,
@@ -104,6 +110,7 @@ pub struct Capabilities {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DecodeError {
     /// Not a full 20-byte packet.
     Length(usize),
@@ -118,6 +125,7 @@ pub enum DecodeError {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EncodeError {
     Unsupported,
     OutOfRange,
@@ -170,6 +178,8 @@ impl Deref for Frame {
 /// A scale's wire protocol: GATT layout, packet decoding, command encoding.
 /// Implementations must be pure (no I/O, no allocation).
 pub trait Protocol {
+    /// Human-readable device name, e.g. for logs.
+    fn name(&self) -> &'static str;
     /// 16-bit UUID of the primary service.
     fn service(&self) -> u16;
     /// Characteristic that notifies measurements.
@@ -179,4 +189,11 @@ pub trait Protocol {
     fn capabilities(&self) -> Capabilities;
     fn decode(&self, packet: &[u8]) -> Result<Event, DecodeError>;
     fn encode(&self, command: Command) -> Result<Frame, EncodeError>;
+}
+
+/// A protocol that can recognise its devices from a scan report, so
+/// applications can discover scales without naming a vendor.
+pub trait Detect: Protocol + Sized {
+    /// `Some` if `adv` looks like a device this protocol drives.
+    fn detect(adv: &Advertisement) -> Option<Self>;
 }

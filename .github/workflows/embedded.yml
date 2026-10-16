@@ -1,0 +1,110 @@
+# Not managed by orcastrate: checks the shared rust-ci template cannot express
+# (bare-metal targets, firmware, platform-specific backends).
+name: Embedded & Desktop Backends
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUST_BACKTRACE: short
+  RUSTFLAGS: "-D warnings"
+  RUSTUP_MAX_RETRIES: 10
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # These targets have no std and no allocator: a std-only dependency fails here.
+  no-std:
+    name: no_std (no alloc)
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          targets: thumbv7em-none-eabihf, riscv32imc-unknown-none-elf
+
+      - name: Cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+
+      - name: Core and protocols without std or alloc
+        run: |
+          for target in thumbv7em-none-eabihf riscv32imc-unknown-none-elf; do
+            cargo build -p brewscale-core --no-default-features --target "$target"
+            cargo build -p brewscale-bookoo --no-default-features --target "$target"
+            # umbrella with no protocol, and with each protocol on its own
+            cargo build -p brewscale --no-default-features --target "$target"
+            cargo build -p brewscale --no-default-features --features bookoo --target "$target"
+          done
+
+      - name: TrouBLE backend
+        run: cargo build -p brewscale-trouble --target thumbv7em-none-eabihf
+
+      # ESP32-C3 has no atomic CAS; the firmware gets it from esp-hal (see firmware job).
+      - name: TrouBLE backend on RISC-V
+        run: cargo build -p brewscale-trouble --target riscv32imc-unknown-none-elf
+        env:
+          RUSTFLAGS: -D warnings --cfg portable_atomic_unsafe_assume_single_core
+
+  # Builds the actual firmware for ESP32-C3. Compiles only; no radio is exercised.
+  firmware:
+    name: ESP32-C3 firmware
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: examples/esp32c3
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          targets: riscv32imc-unknown-none-elf
+          components: clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: examples/esp32c3
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Clippy
+        run: cargo clippy --release -- -D warnings
+
+  # btleplug links BlueZ (Linux), WinRT (Windows) and CoreBluetooth (macOS).
+  desktop:
+    name: Desktop backend (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, windows-latest, macos-latest]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          components: clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+
+      - name: Install libdbus
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      - name: Clippy
+        run: cargo clippy -p brewscale --features btleplug --all-targets -- -D warnings

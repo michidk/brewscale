@@ -1,6 +1,6 @@
 [package]
 name = "brewscale"
-description = "BLE coffee-scale drivers (BOOKOO Themis Mini/Ultra) with a desktop btleplug backend; re-exports brewscale-core"
+description = "Protocol-agnostic BLE coffee-scale API: pick protocols by feature, pick a BLE backend; re-exports brewscale-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,24 +8,32 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme = "../README.md"
-keywords = ["ble", "scale", "bookoo", "coffee", "btleplug"]
-categories = ["hardware-support"]
+keywords = ["no-std", "ble", "scale", "coffee", "btleplug"]
+categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-brewscale-core = { version = "0.1.0", path = "../brewscale-core", features = ["std"] }
+brewscale-core = { version = "0.1.0", path = "../brewscale-core", default-features = false }
+brewscale-bookoo = { version = "0.1.0", path = "../brewscale-bookoo", default-features = false, optional = true }
 btleplug = { version = "0.13", optional = true }
-uuid = { version = "1", optional = true }
 futures = { version = "0.3", default-features = false, features = ["std"], optional = true }
 tokio = { version = "1", default-features = false, features = ["macros"], optional = true }
+uuid = { version = "1", optional = true }
 
 [dev-dependencies]
+brewscale-core = { path = "../brewscale-core", features = ["mock"] }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "macros"] }
 
 [features]
-default = []
+default = ["bookoo"]
+std = ["brewscale-core/std", "brewscale-bookoo?/std"]
+
+# Protocols: enable only the ones you need. See src/any.rs to add one.
+bookoo = ["dep:brewscale-bookoo"]
+
+# Backends. Embedded backends live in their own crates (e.g. brewscale-trouble).
 # Linux (BlueZ), Windows and macOS BLE central via btleplug. Needs a Tokio runtime.
-btleplug = ["dep:btleplug", "dep:futures", "dep:tokio", "dep:uuid"]
+btleplug = ["std", "dep:btleplug", "dep:futures", "dep:tokio", "dep:uuid"]
 
 [[example]]
 name = "desktop"
-required-features = ["btleplug"]
+required-features = ["btleplug", "bookoo"]

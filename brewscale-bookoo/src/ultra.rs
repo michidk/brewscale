@@ -5,7 +5,16 @@ use super::*;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Ultra;
 
+impl Detect for Ultra {
+    fn detect(adv: &Advertisement) -> Option<Self> {
+        (Model::identify(adv) == Some(Model::Ultra)).then_some(Self)
+    }
+}
+
 impl Protocol for Ultra {
+    fn name(&self) -> &'static str {
+        "BOOKOO Themis Ultra"
+    }
     fn service(&self) -> u16 {
         SERVICE
     }

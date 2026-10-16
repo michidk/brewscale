@@ -17,9 +17,3 @@ trouble-host = { version = "0.8", default-features = false, features = ["central
 bt-hci = "0.10"
 embassy-sync = "0.8"
 embassy-futures = "0.1"
-
-[features]
-default = []
-# Forward trouble-host's logging backends.
-log = ["trouble-host/log"]
-defmt = ["trouble-host/defmt"]
