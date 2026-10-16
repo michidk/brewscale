@@ -2,6 +2,7 @@
 name = "brewscale-bookoo"
 description = "BOOKOO Themis Mini/Ultra BLE protocol drivers for brewscale (no_std, no alloc)"
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

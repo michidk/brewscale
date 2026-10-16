@@ -31,8 +31,6 @@ brewscale-trouble = "0.1"
 brewscale-core = { version = "0.1", default-features = false }
 ```
 
-> Not yet published to crates.io; use `path`/`git` dependencies for now.
-
 ## Protocol-agnostic applications
 
 `AnyProtocol` is generated from the enabled protocol features. The application
@@ -62,8 +60,8 @@ reconnect. `protocol.capabilities()` tells you what the connected scale
 supports (timer, dose weight, ...); unsupported commands return
 `EncodeError::Unsupported`.
 
-Full programs: [`brewscale/examples/desktop.rs`](brewscale/examples/desktop.rs)
-and [`examples/esp32c3/src/bin/scale.rs`](examples/esp32c3/src/bin/scale.rs).
+Full programs: [`brewscale/examples/desktop.rs`](https://github.com/michidk/brewscale/blob/main/brewscale/examples/desktop.rs)
+and [`examples/esp32c3/src/bin/scale.rs`](https://github.com/michidk/brewscale/blob/main/examples/esp32c3/src/bin/scale.rs).
 
 ## Design
 
@@ -90,18 +88,18 @@ and [`examples/esp32c3/src/bin/scale.rs`](examples/esp32c3/src/bin/scale.rs).
    `.github/workflows/bump-version.yml` and `publish-cratesio.yml` (list
    dependencies first).
 
-[`brewscale-core/src/scale.rs`](brewscale-core/src/scale.rs) contains a ten-line
+[`brewscale-core/src/scale.rs`](https://github.com/michidk/brewscale/blob/main/brewscale-core/src/scale.rs) contains a ten-line
 toy protocol test showing the minimum.
 
 ## Adding a backend
 
 Implement `Transport`, `Link` and `Notifications` from `brewscale-core`
-(`brewscale-trouble` and `brewscale/src/btleplug_transport.rs` are the
+(`brewscale-trouble` and [`brewscale/src/btleplug_transport.rs`](https://github.com/michidk/brewscale/blob/main/brewscale/src/btleplug_transport.rs) are the
 references). `Notifications::next` must be cancel-safe.
 
 ## ESP32
 
-See [`examples/esp32c3`](examples/esp32c3/README.md) for hardware, flashing and
+See [`examples/esp32c3`](https://github.com/michidk/brewscale/blob/main/examples/esp32c3/README.md) for hardware, flashing and
 expected output. Target: **ESP32-C3** (stable Rust, `riscv32imc-unknown-none-elf`).
 ESP32-S3 needs the Xtensa toolchain (`espup`) and is not built here, but
 `brewscale-trouble` is chip-independent: any `trouble-host` controller works.

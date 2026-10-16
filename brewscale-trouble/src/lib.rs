@@ -2,7 +2,7 @@
 //! that works with any HCI [`Controller`] (e.g. ESP32 via `esp-radio`).
 //!
 //! `no_std`, no heap. The caller owns the TrouBLE [`Stack`] and must keep its
-//! [`Runner`](trouble_host::prelude::Runner) running next to the application,
+//! [`Runner`] running next to the application,
 //! passing the [`ScanInbox`] as its event handler so scan results reach
 //! [`TroubleTransport::scan`]:
 //!

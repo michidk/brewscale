@@ -19,7 +19,7 @@ Stack: `esp-hal` 1.x + `esp-rtos` (embassy) + `esp-radio` BLE controller →
 ## Build and flash
 
 ```sh
-rustup target add riscv32imc-unknown-none-elf   # stable toolchain is enough
+rustup target add riscv32imc-unknown-none-elf   # stable toolchain, Rust 1.95+ (esp-rtos MSRV)
 cargo install espflash                          # flasher + serial monitor
 
 cd examples/esp32c3

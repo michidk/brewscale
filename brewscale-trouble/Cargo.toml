@@ -2,8 +2,9 @@
 name = "brewscale-trouble"
 description = "TrouBLE (trouble-host) BLE central backend for brewscale: no_std, no alloc, any HCI controller"
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+rust-version = "1.88"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
