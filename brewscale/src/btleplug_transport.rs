@@ -1,5 +1,6 @@
 use std::boxed::Box;
 use std::pin::Pin;
+use std::sync::{Mutex, PoisonError};
 
 use brewscale_core::{Advertisement, ErrorKind, Link, Notifications, Transport, TransportError};
 use btleplug::api::bleuuid::uuid_from_u16;
@@ -161,7 +162,12 @@ impl Link for BtleplugLink {
         let values = self.peripheral.notifications().await?;
         let events = self.adapter.events().await?;
         self.peripheral.subscribe(c).await?;
-        Ok(BtleplugNotifications { values, events, id: self.peripheral.id(), uuid: c.uuid })
+        Ok(BtleplugNotifications {
+            values: Mutex::new(values),
+            events: Mutex::new(events),
+            id: self.peripheral.id(),
+            uuid: c.uuid,
+        })
     }
 
     async fn disconnect(&self) -> Result<(), Error> {
@@ -170,8 +176,10 @@ impl Link for BtleplugLink {
 }
 
 pub struct BtleplugNotifications {
-    values: Pin<Box<dyn Stream<Item = ValueNotification> + Send>>,
-    events: Events,
+    // `Mutex` only makes these `Sync` (so `Scale` futures are `Send`, e.g. for `tokio::spawn`);
+    // access is always exclusive through `&mut self`, so it never blocks.
+    values: Mutex<Pin<Box<dyn Stream<Item = ValueNotification> + Send>>>,
+    events: Mutex<Events>,
     id: PeripheralId,
     uuid: Uuid,
 }
@@ -181,9 +189,11 @@ impl Notifications for BtleplugNotifications {
 
     /// Cancel-safe: both branches are `Stream::next`.
     async fn next(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let values = self.values.get_mut().unwrap_or_else(PoisonError::into_inner);
+        let events = self.events.get_mut().unwrap_or_else(PoisonError::into_inner);
         loop {
             select! {
-                v = self.values.next() => match v {
+                v = values.next() => match v {
                     Some(v) if v.uuid == self.uuid => {
                         let n = v.value.len().min(buf.len());
                         buf[..n].copy_from_slice(&v.value[..n]);
@@ -193,7 +203,7 @@ impl Notifications for BtleplugNotifications {
                     None => return Err(Error::Disconnected),
                 },
                 // Not every platform ends the value stream on disconnect.
-                e = self.events.next() => match e {
+                e = events.next() => match e {
                     Some(CentralEvent::DeviceDisconnected(id)) if id == self.id => return Err(Error::Disconnected),
                     Some(_) => {}
                     None => return Err(Error::Disconnected),
