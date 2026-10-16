@@ -1,0 +1,31 @@
+[package]
+name = "brewscale"
+description = "BLE coffee-scale drivers (BOOKOO Themis Mini/Ultra) with a desktop btleplug backend; re-exports brewscale-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../README.md"
+keywords = ["ble", "scale", "bookoo", "coffee", "btleplug"]
+categories = ["hardware-support"]
+
+[dependencies]
+brewscale-core = { version = "0.1.0", path = "../brewscale-core", features = ["std"] }
+btleplug = { version = "0.13", optional = true }
+uuid = { version = "1", optional = true }
+futures = { version = "0.3", default-features = false, features = ["std"], optional = true }
+tokio = { version = "1", default-features = false, features = ["macros"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "time", "macros"] }
+
+[features]
+default = []
+# Linux (BlueZ), Windows and macOS BLE central via btleplug. Needs a Tokio runtime.
+btleplug = ["dep:btleplug", "dep:futures", "dep:tokio", "dep:uuid"]
+
+[[example]]
+name = "desktop"
+required-features = ["btleplug"]

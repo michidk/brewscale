@@ -1,0 +1,19 @@
+[package]
+name = "brewscale-core"
+description = "no_std, no-alloc BLE coffee-scale protocol drivers (BOOKOO Themis Mini/Ultra) and transport traits"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../README.md"
+keywords = ["no-std", "ble", "scale", "bookoo", "embedded"]
+categories = ["embedded", "no-std::no-alloc", "hardware-support"]
+
+[features]
+default = []
+# Implements std::error::Error for the error types.
+std = []
+# In-memory Transport used by the shared protocol/driver tests (no_std too).
+mock = []

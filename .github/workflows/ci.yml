@@ -1,0 +1,111 @@
+name: Checks and Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  # Host tests: protocol parsers + driver over the mock transport.
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --features brewscale-core/mock -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace --features brewscale-core/mock
+
+  # Desktop backend on all three OSes (btleplug links BlueZ/WinRT/CoreBluetooth).
+  desktop:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Install libdbus
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      - name: Lint desktop backend
+        run: cargo clippy -p brewscale --features btleplug --all-targets -- -D warnings
+
+  # Proves the core needs no std and no allocator: these targets have neither.
+  no-std:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          targets: thumbv7em-none-eabihf, riscv32imc-unknown-none-elf
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Core without std or alloc
+        run: |
+          cargo build -p brewscale-core --no-default-features --target thumbv7em-none-eabihf
+          cargo build -p brewscale-core --no-default-features --features mock --target thumbv7em-none-eabihf
+          cargo build -p brewscale-core --no-default-features --target riscv32imc-unknown-none-elf
+
+      - name: TrouBLE backend
+        run: cargo build -p brewscale-trouble --target thumbv7em-none-eabihf
+
+      # ESP32-C3 has no atomic CAS; the firmware gets it from esp-hal (see esp32c3 job).
+      - name: TrouBLE backend on RISC-V
+        run: cargo build -p brewscale-trouble --target riscv32imc-unknown-none-elf
+        env:
+          RUSTFLAGS: --cfg portable_atomic_unsafe_assume_single_core
+
+  # Builds the actual firmware for ESP32-C3. Compiles only; no radio is exercised.
+  esp32c3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: examples/esp32c3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          targets: riscv32imc-unknown-none-elf
+          components: clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: examples/esp32c3
+
+      - name: Build firmware
+        run: cargo build --release
+
+      - name: Lint firmware
+        run: cargo clippy --release -- -D warnings
