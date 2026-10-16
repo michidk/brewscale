@@ -18,6 +18,8 @@ macro_rules! protocols {
             $(#[cfg(feature = $feature)] $Variant($ty),)*
         }
 
+        // With no protocol enabled the enum is empty and every method is `match *self {}`.
+        #[allow(unused_variables)]
         impl Protocol for AnyProtocol {
             fn name(&self) -> &'static str {
                 match *self { $(#[cfg(feature = $feature)] Self::$Variant(ref p) => p.name(),)* }

@@ -19,6 +19,10 @@ futures = { version = "0.3", default-features = false, features = ["std"], optio
 tokio = { version = "1", default-features = false, features = ["macros"], optional = true }
 uuid = { version = "1", optional = true }
 
+# Bundle libdbus on Linux so `btleplug` builds without libdbus-1-dev/pkg-config.
+[target.'cfg(target_os = "linux")'.dependencies]
+libdbus-sys = { version = "0.2", features = ["vendored"], optional = true }
+
 [dev-dependencies]
 brewscale-core = { path = "../brewscale-core", features = ["mock"] }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "macros"] }
@@ -32,7 +36,7 @@ bookoo = ["dep:brewscale-bookoo"]
 
 # Backends. Embedded backends live in their own crates (e.g. brewscale-trouble).
 # Linux (BlueZ), Windows and macOS BLE central via btleplug. Needs a Tokio runtime.
-btleplug = ["std", "dep:btleplug", "dep:futures", "dep:tokio", "dep:uuid"]
+btleplug = ["std", "dep:btleplug", "dep:futures", "dep:tokio", "dep:uuid", "dep:libdbus-sys"]
 
 [[example]]
 name = "desktop"
