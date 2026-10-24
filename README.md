@@ -1,11 +1,18 @@
 # brewscale
 
 Protocol-agnostic BLE coffee-scale library for Rust, on desktop **and**
-microcontrollers. Write your application once against one API; pick which scale
-protocols and which Bluetooth backend get compiled in.
+microcontrollers. Write your application once against one API; add scale
+protocols and Bluetooth backends without changing application code.
 
-Currently supported scales: **BOOKOO Themis Mini** and **Themis Ultra** (wire
-format from the vendor's [open protocol docs](https://github.com/BooKooCode/OpenSource)).
+The browser client is [brewscale-web](https://github.com/michidk/brewscale-web),
+a TypeScript implementation of the same protocol and transport boundaries.
+Keep the two projects aligned when adding shared scale concepts or supported
+protocols.
+
+## Supported models
+
+The current built-in protocol support is **BOOKOO Themis Mini** and **Themis
+Ultra**, using the vendor's [open protocol docs](https://github.com/BooKooCode/OpenSource).
 
 ## Crates
 
